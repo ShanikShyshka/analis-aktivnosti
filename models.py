@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationships
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, String, Date, Numeric, DateTime
 from database import Base
 from datetime import date, datetime
@@ -15,7 +15,7 @@ class revenue_store(Base):
     revenue: Mapped[float] = mapped_column()
     order_count: Mapped[int] = mapped_column()
 
-    response: Mapped["revenue_store_response"] = relationships(back_populates="stores")
+    response: Mapped["revenue_store_response"] = relationship(back_populates="stores")
 
 class revenue_store_response(Base):
     __tablename__ = "revenue_responses"
@@ -23,31 +23,35 @@ class revenue_store_response(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     date_from: Mapped[date] = mapped_column(Date, index=True)
     date_to: Mapped[date] = mapped_column(Date, index=True)
-    total_revenue: Mapped[float] = mapped_column(15, 2)
+    total_revenue: Mapped[float] = mapped_column(Numeric(15, 2))
     total_orders: Mapped[int] = mapped_column()
 
-    stores: Mapped[List["revenue_store"]] = relationships(back_populates="response", cascade="all, delete-orphan")
+    stores: Mapped[List["revenue_store"]] = relationship(back_populates="response", cascade="all, delete-orphan")
 
 
-class avg_check_detail(Base):
-    __tablename__ = "avg_check_details  "
+class Avg_check_detail(Base):
+    __tablename__ = "avg_check_details"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    # Внешний ключ ссылается на имя ТАБЛИЦЫ в БД ("avg_check_responses.id")
     response_id: Mapped[int] = mapped_column(ForeignKey("avg_check_responses.id", ondelete="CASCADE"), index=True)
-    type: Mapped[str] = mapped_column(String(50), index=True)  # 'store' или 'hour'
-    text: Mapped[str] = mapped_column(String(255))  # Название магазина или час (например, '13:00')
+    type: Mapped[str] = mapped_column(String(50), index=True)
+    text: Mapped[str] = mapped_column(String(255))
     avg_check: Mapped[float] = mapped_column(Numeric(15, 2))
     order_count: Mapped[int] = mapped_column()
 
-    response: Mapped["avg_check_responce"] = relationships(back_populates="details")
+    # Исправлено: Ссылка на имя КЛАССА "AvgCheckResponse"
+    response: Mapped["Avg_check_response"] = relationship(back_populates="details")
 
-class avg_check_responce(Base):
-    __tablename__ = "avg_check_responces"
+
+class Avg_check_response(Base):
+    __tablename__ = "avg_check_responses"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    global_avg_check: Mapped[int] = mapped_column(Numeric(15, 2))
+    global_avg_check: Mapped[float] = mapped_column(Numeric(15, 2))
 
-    details: Mapped[List["avg_check_detail"]] = relationships(back_populates="response", cascade="all, delete-orphan")
+    details: Mapped[List["Avg_check_detail"]] = relationship(back_populates="response", cascade="all, delete-orphan")
+
 
 
 class product_items(Base):
@@ -62,7 +66,7 @@ class customer_activities(Base):
     __tablename__ = "customer_activities"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    timestamp: Mapped[str] = mapped_column(DateTime, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, index=True)
     customer_count: Mapped[int] = mapped_column()
 
 class rfm_analysis(Base):

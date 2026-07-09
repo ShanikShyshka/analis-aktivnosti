@@ -93,13 +93,13 @@ async def get_revenue(filters: dict = Depends(get_analytics_filters), db: AsyncS
 
 @app.get("/api/analytics/avg-check", response_model=schemas.avg_check_response, tags=["Средний чек"])
 async def get_avg_check(filters: dict = Depends(get_analytics_filters), db: AsyncSession = Depends(get_db)):
-    store_query = select(md.avg_check_detail).where(md.avg_check_detail.type == "store")
+    store_query = select(md.Avg_check_detail).where(md.Avg_check_detail.type == "store")
 
     if filters["store_id"] is not None:
-        store_query = store_query.where(md.avg_check_detail.text == select(md.revenue_store.store_name).where(
+        store_query = store_query.where(md.Avg_check_detail.text == select(md.revenue_store.store_name).where(
             md.revenue_store.store_id == filters["store_id"]).scalar_subquery())
 
-    hour_query = select(md.avg_check_detail).where(md.avg_check_detail.type == "hour")
+    hour_query = select(md.Avg_check_detail).where(md.Avg_check_detail.type == "hour")
 
     store_result = await db.execute(store_query)
     hour_result = await db.execute(hour_query)
