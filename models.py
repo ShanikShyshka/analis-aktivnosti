@@ -33,14 +33,12 @@ class Avg_check_detail(Base):
     __tablename__ = "avg_check_details"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    # Внешний ключ ссылается на имя ТАБЛИЦЫ в БД ("avg_check_responses.id")
     response_id: Mapped[int] = mapped_column(ForeignKey("avg_check_responses.id", ondelete="CASCADE"), index=True)
     type: Mapped[str] = mapped_column(String(50), index=True)
     text: Mapped[str] = mapped_column(String(255))
     avg_check: Mapped[float] = mapped_column(Numeric(15, 2))
     order_count: Mapped[int] = mapped_column()
 
-    # Исправлено: Ссылка на имя КЛАССА "AvgCheckResponse"
     response: Mapped["Avg_check_response"] = relationship(back_populates="details")
 
 

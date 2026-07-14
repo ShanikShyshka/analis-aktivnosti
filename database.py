@@ -1,8 +1,9 @@
-import os
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
+from fastapi import Query
+from datetime import date, timedelta, datetime
 
 
 
@@ -32,3 +33,19 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         raise
     finally:
         await session.close()
+
+
+
+"""
+    :param dateFrom: Начало периода (по умолчанию: 30 дней назад).
+    :param dateTO: Конец периода (по умолчанию: сегодня).
+    :param storeID: ID конкретного магазина. Если не передан, данные собираются по всей торговой сети
+    :return: Возвращает параметры фильтра
+"""
+
+def get_analytics_filters(
+        dateFrom: date = Query(default=date.today() - timedelta(days=30), description="Начало периода"),
+        dateTo: date = Query(default=date.today(), description="Конец периода"),
+        storeId: Optional[int] = Query(default=None, description="ID магазина для фильтрации (опционально)")
+):
+    return {"date_from": dateFrom, "date_to": dateTo, "store_id": storeId}

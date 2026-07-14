@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import List
 
 
@@ -38,9 +38,12 @@ class product_item(BaseModel):
     product_name: str
     quantity_sold: int = Field(..., description="Количество проданого")
     revenue: float = Field(..., description="Выручка")
-class customer_activity(BaseModel):
-    timestamp: str
-    customer_count: int = Field()
+class customer_activities(BaseModel):
+    timestamp: datetime = Field()
+    customer_count: int
+
+    class Config:
+        from_attributes = True
 
 class RFM(BaseModel):
     customer_segment: str = Field(..., description="Сегменты клиентов")
