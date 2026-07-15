@@ -27,7 +27,6 @@ async def get_top_products(
         limit: int = Query(default=10, ge=1, le=50, description="Количество товаров в топе"),
         sort_by: Literal["quantity", "revenue"] = Query(default="quantity",
                                                         description="Сортировать по: quantity или revenue"),
-        filters: dict = Depends(get_analytics_filters),
         db: AsyncSession = Depends(get_db)
 ):
     sort_column = md.product_items.quantity_sold if sort_by == "quantity" else md.product_items.revenue

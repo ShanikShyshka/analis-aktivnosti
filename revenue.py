@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-
+from sqlalchemy import select, func
 from database import get_db, get_analytics_filters
 import models as md
-import schemas
 
 router = APIRouter(
     prefix="/api/analytics/revenue",
@@ -12,41 +10,59 @@ router = APIRouter(
 )
 
 """
-    :param date_from:  Дата начала отчета.
-    :param date_to: Дата конца отчета.
-    :param total_revenue: Суммарная выручка (в валюте) по всем найденным точкам за период.
-    :param total_orders: Суммарное количество чеков/заказов за период.
-    :stores(list):
-        :param store_id: Уникальный номер магазина.
-        :param store_name: Название торговой точки.
-        :param revenue: Выручка конкретного магазина.
-        :param order_count: Количество заказов конкретного магазина
-    :return: Считает общую финансовую выручку и количество заказов за указанный период (глобально или по конкретному магазину).
+Получить ежедневную аналитику выручки и заказов с фильтрацией по датам.
+
+Возвращает агрегированные данные о выручке и количестве заказов по дням,
+а также общие суммарные показатели за весь указанный период.
+
+:param filters: Словарь параметров фильтрации (date_from, date_to, store_id).
+:param db: Асинхронная сессия SQLAlchemy (AsyncSession) для работы с БД.
+:return: Словарь, содержащий общую выручку (total_revenue), общее число заказов
+         (total_orders) и список с разбивкой по дням (daily_data).
 """
 
-@router.get("", response_model=schemas.revenue_store_response)
+@router.get("")
 async def get_revenue(
     filters: dict = Depends(get_analytics_filters),
     db: AsyncSession = Depends(get_db)
 ):
-    query = select(md.revenue_store).join(md.revenue_store_response).where(
-        md.revenue_store_response.date_from >= filters["date_from"],
-        md.revenue_store_response.date_to <= filters["date_to"]
+    # 1. Основной запрос с явным JOIN между avg_check_details и avg_check_responses
+    daily_query = (
+        select(
+            md.Avg_check_detail.response_id,
+            func.sum(md.Avg_check_detail.avg_check * md.Avg_check_detail.order_count).label('daily_revenue'),
+            func.sum(md.Avg_check_detail.order_count).label('daily_orders'),
+            md.Avg_check_response.date.label('date')
+        )
+        .select_from(md.Avg_check_detail)
+        .join(md.Avg_check_response, md.Avg_check_detail.response_id == md.Avg_check_response.id)
+        .where(
+            md.Avg_check_detail.type == 'store',
+            md.Avg_check_response.date >= filters['date_from'],
+            md.Avg_check_response.date <= filters['date_to']
+        )
+        .group_by(md.Avg_check_detail.response_id, md.Avg_check_response.date)
+        .order_by(md.Avg_check_response.date)
     )
 
-    if filters.get("store_id") is not None:
-        query = query.where(md.revenue_store.store_id == filters["store_id"])
+    result = await db.execute(daily_query)
+    rows = result.all()
 
-    result = await db.execute(query)
-    stores = result.scalars().all()
+    daily_data = []
+    total_revenue = 0
+    total_orders = 0
 
-    total_revenue = sum(store.revenue for store in stores)
-    total_orders = sum(getattr(store, "order_count", 0) for store in stores)
+    for row in rows:
+        daily_data.append({
+            'date': row.date.isoformat(),
+            'revenue': float(row.daily_revenue),
+            'orders': int(row.daily_orders)
+        })
+        total_revenue += float(row.daily_revenue)
+        total_orders += int(row.daily_orders)
 
     return {
-        "date_from": filters["date_from"],
-        "date_to": filters["date_to"],
-        "total_revenue": total_revenue,
-        "total_orders": total_orders,
-        "stores": stores
+        'total_revenue': total_revenue,
+        'total_orders': total_orders,
+        'daily_data': daily_data
     }
